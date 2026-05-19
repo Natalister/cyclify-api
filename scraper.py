@@ -13,19 +13,16 @@ def get_upcoming_races():
     response = requests.get(url, headers=headers, timeout=10)
     soup = BeautifulSoup(response.text, "html.parser")
 
-    table = soup.find("table")
-    if not table:
-        return {"error": "no table found"}
-
-    # On retourne les 3 premières lignes brutes pour voir la structure
-    rows = table.find_all("tr")[:4]
+    # Lister TOUTES les tables avec leur index et premier contenu
+    all_tables = soup.find_all("table")
     debug = []
-    for row in rows:
-        cols = row.find_all("td")
+    for i, table in enumerate(all_tables):
+        rows = table.find_all("tr")[:2]
         debug.append({
-            "nb_cols": len(cols),
-            "cols_text": [c.get_text(strip=True) for c in cols],
-            "cols_html": [str(c)[:200] for c in cols],
+            "table_index": i,
+            "table_class": table.get("class"),
+            "nb_rows": len(table.find_all("tr")),
+            "first_rows_text": [[c.get_text(strip=True) for c in r.find_all("td")] for r in rows],
         })
 
-    return {"debug_rows": debug}
+    return {"total_tables": len(all_tables), "tables": debug}
