@@ -7,7 +7,7 @@ HEADERS = {
 }
 
 def get_upcoming_races():
-    url = "https://www.procyclingstats.com/races.php?year=2025&circuit=1&class=2.UWT"
+    url = "https://www.procyclingstats.com/races.php?s=&year=2026&circuit=1&class=&filter=Filter"
     
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
