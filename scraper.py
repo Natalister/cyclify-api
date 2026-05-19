@@ -7,6 +7,9 @@ def country_code_to_flag(country_code: str) -> str:
         return "🏁"
     return "".join(chr(0x1F1E6 + ord(c) - ord('A')) for c in country_code.upper())
 
+def parse_date(d, year):
+    return datetime.strptime(f"{d}.{year}", "%d.%m.%Y").date()
+
 def get_upcoming_races():
     year = datetime.now().year
     today = datetime.now().date()
@@ -21,7 +24,7 @@ def get_upcoming_races():
         soup = BeautifulSoup(response.text, "html.parser")
 
         tables = soup.find_all("table")
-        table = tables[1]  # index 1 = table du calendrier
+        table = tables[1]
 
         races = []
 
@@ -31,16 +34,43 @@ def get_upcoming_races():
                 continue
 
             try:
-                # Catégorie — on garde uniquement UWT
                 category = cols[3].get_text(strip=True)
                 if "UWT" not in category:
                     continue
 
-                # Dates format "20.01-25.01" ou "20.01"
                 date_text = cols[0].get_text(strip=True).replace(" ", "")
                 parts = date_text.split("-")
                 start_str = parts[0].strip()
                 end_str = parts[1].strip() if len(parts) > 1 else None
 
-                def parse_date(d):
-                    return datetime.strptime(f"{d}.{year}", "%d.%m.%
+                start = parse_date(start_str, year)
+                end = parse_date(end_str, year) if end_str else None
+
+                if start < today:
+                    continue
+
+                name_tag = cols[1].find("a")
+                name = name_tag.get_text(strip=True) if name_tag else cols[1].get_text(strip=True)
+
+                flag_span = cols[1].find("span", class_="flag")
+                country_code = ""
+                if flag_span:
+                    classes = flag_span.get("class", [])
+                    country_code = next((c.replace("flag-", "") for c in classes if c.startswith("flag-")), "")
+
+                races.append({
+                    "name": name,
+                    "start_date": start.strftime("%-d %b"),
+                    "end_date": end.strftime("%-d %b") if end else None,
+                    "country": country_code_to_flag(country_code),
+                    "sort_date": start.isoformat(),
+                })
+
+            except Exception:
+                continue
+
+        races.sort(key=lambda x: x["sort_date"])
+        return {"races": races, "updated_at": datetime.utcnow().isoformat()}
+
+    except Exception as e:
+        return {"error": str(e), "races": []}
